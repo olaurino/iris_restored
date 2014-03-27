@@ -36,12 +36,14 @@ package spv.components;
  *  12 Feb 2011  -  Implemented (IB)
  */
 
+import cfa.vo.iris.events.ModelEvent;
+import cfa.vo.iris.events.ModelListener;
+import cfa.vo.iris.sed.CalculatedModel;
+import cfa.vo.iris.sed.ExtSed;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.*;
 import java.util.List;
 import java.lang.reflect.Constructor;
@@ -143,6 +145,8 @@ public class SherpaModelManager extends SpvModelManager {
 
         pathMap = new HashMap<String,String>();
         functionNameMap = new HashMap<String,String>();
+        
+        ModelEvent.getInstance().add(new CalculatedModelListener());
     }
 
     // .execute() is the main method used by the caller to activate the fit.
@@ -605,20 +609,10 @@ public class SherpaModelManager extends SpvModelManager {
         double[] wave  = SpvEncodeDoubleArray.decodeBase64(x);
         double[] flux  = SpvEncodeDoubleArray.decodeBase64(y);
         double[] error = SpvEncodeDoubleArray.decodeBase64(e);
-
-        // this handles data markers in target array in fsp spectrum.
-        double[] hflux = fsp.getValues();
-        int j = 0;
-        for (int i = 0; i < hflux.length; i++) {
-            if (hflux[i] != Constant.DATA_MARKER) {
-                try {
-                    hflux[i] = flux[j++];
-                } catch (ArrayIndexOutOfBoundsException e1) {
-                }
-            }
-        }
-
-        ((SEDFittedSpectrum) fsp).setModelValues(hflux);
+        
+        CalculatedModel m = new CalculatedModel(wave, flux, error);
+        ModelEvent.getInstance().fire(null, m);
+        
 
         setGUIDoneFitting();
 
@@ -875,5 +869,27 @@ public class SherpaModelManager extends SpvModelManager {
                 fitManager.setGUIStatus(MinimizationAlgorithm.STOPPED_AT_BEGINNING);
             }
         }
+    }
+    
+    class CalculatedModelListener implements ModelListener {
+
+        @Override
+        public void process(ExtSed source, CalculatedModel payload) {
+            double[] flux = payload.getY();
+            // this handles data markers in target array in fsp spectrum.
+            double[] hflux = fsp.getValues();
+            int j = 0;
+            for (int i = 0; i < hflux.length; i++) {
+                if (hflux[i] != Constant.DATA_MARKER) {
+                    try {
+                        hflux[i] = flux[j++];
+                    } catch (ArrayIndexOutOfBoundsException e1) {
+                    }
+                }
+            }
+
+            ((SEDFittedSpectrum) fsp).setModelValues(hflux);
+        }
+        
     }
 }
