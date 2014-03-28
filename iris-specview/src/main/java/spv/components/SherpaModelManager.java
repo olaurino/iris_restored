@@ -38,6 +38,8 @@ package spv.components;
 
 import cfa.vo.iris.events.ModelEvent;
 import cfa.vo.iris.events.ModelListener;
+import cfa.vo.iris.logging.LogEntry;
+import cfa.vo.iris.logging.LogEvent;
 import cfa.vo.iris.sed.CalculatedModel;
 import cfa.vo.iris.sed.ExtSed;
 import javax.swing.*;
@@ -875,6 +877,7 @@ public class SherpaModelManager extends SpvModelManager {
 
         @Override
         public void process(ExtSed source, CalculatedModel payload) {
+            LogEvent.getInstance().fire(this, new LogEntry("Processing Model in Listener", this));
             double[] flux = payload.getY();
             // this handles data markers in target array in fsp spectrum.
             double[] hflux = fsp.getValues();
